@@ -1,6 +1,6 @@
 # Introduction to Artificial Intelligence
 # Credit Default Dataset
-# Logistic regression
+# Random Forest Classifier
 # By Juan Carlos Rojas
 # Copyright 2024, Texas Tech University - Costa Rica
 # Modified by: Santiago Jimenez
@@ -9,8 +9,9 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import sklearn.model_selection
-import sklearn.linear_model
+import sklearn.ensemble
 import sklearn.metrics
+import imblearn
 
 # Load and prepare the data
 df = pd.read_csv("data/train.csv", header=0)
@@ -43,51 +44,44 @@ train_data, test_data, train_labels, test_labels = \
             sklearn.model_selection.train_test_split(df, labels,
             test_size=0.2, shuffle=True, random_state=2024)
 
-# Feature scale standardization
-for col in train_data.columns:
-    mean = train_data[col].mean()
-    stddev = train_data[col].std()
-    train_data[col] = train_data[col] - mean
-    train_data[col] = train_data[col]/stddev
-    test_data[col] = test_data[col] - mean
-    test_data[col] = test_data[col]/stddev
-    test_df[col] = test_df[col] - mean
-    test_df[col] = test_df[col]/stddev
+"""
+# Balance classes 
+num_ones = np.count_nonzero(train_labels)
+num_zeros = len(train_labels) - num_ones
+
+resampler = imblearn.under_sampling.RandomUnderSampler(
+        sampling_strategy={0:num_ones, 1:num_ones}, random_state=2024)
+# resampler = imblearn.under_sampling.RandomUnderSampler(
+#         sampling_strategy={0:(num_ones/3), 1:num_ones}, random_state=2024)
+# resampler = imblearn.over_sampling.RandomOverSampler(
+#        sampling_strategy={0:num_zeros, 1:num_zeros}, random_state=2024)
+
+train_data, train_labels = resampler.fit_resample(train_data, train_labels)
+"""
+
+n_est = 100
+msl = 20
+
+model = sklearn.ensemble.RandomForestClassifier(\
+    n_estimators=n_est,
+    min_samples_leaf=msl,
+    n_jobs=-1)
+
+print("With n_estimators={}, min_samples_leaf={}:".format(n_est, msl))
     
-# Select columns of interest (all columns)
-cols = train_data.columns
-
-# Create and train a new logistic regression classifier
-model = sklearn.linear_model.LogisticRegression(\
-        solver='newton-cg',
-        n_jobs=-1)
-
-# Train it with the training data and labels
-model.fit(train_data[cols], train_labels)
-
-# Get the prediction probabilities
-pred_proba = model.predict_proba(test_data[cols])[:,1]
-
-# Print a few predictions
-print(pred_proba[:5])
+model.fit(train_data, train_labels)
+pred_proba = model.predict_proba(test_data)[:,1]
 
 # Compute the area under the ROC curve (ROC AUC)
 auc_score = sklearn.metrics.roc_auc_score(test_labels, pred_proba)
 print("Test AUC score: {:.4f}".format(auc_score))
 
-# Compute ROC AUC against training data
-pred_proba_training = model.predict_proba(train_data[cols])[:,1]
-
-auc_score_training = sklearn.metrics.roc_auc_score(\
-    train_labels, pred_proba_training)
-print("Train AUC score: {:.4f}".format(auc_score_training))
-
-
 # Get the prediction probabilities for the test data
 predictions_test = model.predict_proba(test_df)[:,1]
-
 
 result = pd.DataFrame({'id' : test_ids, 'Response' : predictions_test.flatten()}, 
                       columns=['id', 'Response'])
 
 result.to_csv("data/submission.csv",index=False)
+
+
