@@ -23,6 +23,23 @@ test_df = pd.read_csv("data/test.csv")
 test_ids = test_df['id']
 test_df.drop(columns = ["id"], inplace = True)
 
+# Define the categorical mappings
+categorical_mappings = [
+    {'Female': 0, 'Male': 1},
+    {'< 1 Year': 0, '1-2 Year': 1, '> 2 Years': 2, 'Unknown': -1},
+    {'No': 0, 'Yes': 1, 'Unknown': -1}
+]
+
+# Apply the mappings to the categorical columns
+train_df['Gender'] = train_df['Gender'].replace(categorical_mappings[0])
+train_df['Vehicle_Age'] = train_df['Vehicle_Age'].replace(categorical_mappings[1])
+train_df['Vehicle_Damage'] = train_df['Vehicle_Damage'].replace(categorical_mappings[2])
+
+# Apply the mappings to the categorical columns
+test_df["Gender"] = test_df['Gender'].replace(categorical_mappings[0])
+test_df["Vehicle_Age"] = test_df['Vehicle_Age'].replace(categorical_mappings[1])
+test_df["Vehicle_Damage"] = test_df['Vehicle_Damage'].replace(categorical_mappings[2])
+
 #Use part of the training data for supervised training and testing
 #Test data does not have labels
 train_data, test_data, train_labels, test_labels = \
@@ -34,11 +51,11 @@ n_inputs = train_data.shape[1]
 nsamples = train_data.shape[0]
 
 # Training constants
-n_nodes_l1 = 10
+n_nodes_l1 = 500
 batch_size = math.ceil(nsamples / 10)
-n_epochs = 500
+n_epochs = 750
 eval_step = 5
-learning_rate = 1e-3
+learning_rate = 1e-4
 
 n_batches = math.ceil(nsamples / batch_size)
 
@@ -115,6 +132,7 @@ test_best_val = max(test_auc_hist)
 test_best_idx = test_auc_hist.index(test_best_val)
 print("Best Test AUC:           {:.4f} at epoch: {}".format(test_best_val, epoch_hist[test_best_idx]))
 
+#Predict responses in test data set
 model.predict(test_df, verbose = "auto", steps = None , callbacks = None)
 
 # Plot the history of the loss
