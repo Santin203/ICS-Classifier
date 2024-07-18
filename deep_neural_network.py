@@ -91,9 +91,9 @@ for n in range(n_hidden_layers):
 # Output layer
 model.add(tf.keras.layers.Dense(
         1,
-        activation='softmax',
+        activation='sigmoid',
         kernel_initializer='glorot_normal', bias_initializer='zeros'))
-print("Output Layer: Num nodes={}  Activation=Softmax".format(1))
+print("Output Layer: Num nodes={}  Activation=Sigmoid".format(1))
 
 # Display the network topology
 model.summary()
@@ -107,8 +107,8 @@ print("Optimizer: ADAM.  Learning rate = {}".format(learning_rate))
 # Define model
 model.compile(
         optimizer=optimizer,
-        loss='categorical_crossentropy',
-        metrics=['accuracy']
+        loss='binary_crossentropy',
+        metrics=['AUC']
         )
 
 # Train the neural network
@@ -128,15 +128,15 @@ print("Execution time: {:.1f}".format(elapsed_time))
 cost_test, acc_test = model.evaluate(test_data, test_labels, batch_size=None, verbose=0)
 cost_train, acc_train = model.evaluate(train_data, train_labels, batch_size=None, verbose=0)
 
-print("Final Test Accuracy:     {:.4f}".format(acc_test))
+print("Final Test AUC:     {:.4f}".format(acc_test))
 print("Final Training Cost:     {:.8f}".format(cost_train))
 
 # Compute the best test result from the history
 epoch_hist = [i for i in range(0, n_epochs, eval_step)]
-test_acc_hist = history.history['val_accuracy']
+test_acc_hist = history.history['val_AUC']
 test_best_val = max(test_acc_hist)
 test_best_idx = test_acc_hist.index(test_best_val)
-print("Best Test Accuracy:      {:.4f} at epoch: {}".format(test_best_val, epoch_hist[test_best_idx]))
+print("Best Test AUC:      {:.4f} at epoch: {}".format(test_best_val, epoch_hist[test_best_idx]))
 
 #Predict responses in test data set
 prediction_test = model.predict(test_df, verbose = "auto", steps = None , callbacks = None)
@@ -154,8 +154,8 @@ plt.xlabel('Epoch')
 
 # Plot the history of the test accuracy
 plt.figure()
-plt.plot(epoch_hist, history.history['val_accuracy'], "r")
-plt.title('Test Accuracy')
-plt.ylabel('Accuracy')
+plt.plot(epoch_hist, history.history['val_AUC'], "r")
+plt.title('Test AUC')
+plt.ylabel('AUC')
 plt.xlabel('Epoch')
 plt.show()
