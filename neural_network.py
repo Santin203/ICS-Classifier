@@ -133,7 +133,12 @@ test_best_idx = test_auc_hist.index(test_best_val)
 print("Best Test AUC:           {:.4f} at epoch: {}".format(test_best_val, epoch_hist[test_best_idx]))
 
 #Predict responses in test data set
-model.predict(test_df, verbose = "auto", steps = None , callbacks = None)
+prediction_test = model.predict(test_df, verbose = "auto", steps = None , callbacks = None)
+
+result = pd.DataFrame({'id' : test_ids, 'Response' : prediction_test.flatten()}, 
+                      columns=['id', 'Response'])
+
+result.to_csv("data/submission.csv",index=False)
 
 # Plot the history of the loss
 plt.plot(history.history['loss'])
