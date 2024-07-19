@@ -1,31 +1,30 @@
 # Introduction to Artificial Intelligence
-# MNIST dataset
-# Deep Neural Network, version 2
+# Credit Default Dataset
+# Shallow Neural Network using Keras, version 1
 # By Juan Carlos Rojas
-# Modified by Jose Campos
 # Copyright 2024, Texas Tech University - Costa Rica
+# Modified by: Santiago Jimenez
+
 
 import numpy as np
 import pandas as pd
-import pickle
 import tensorflow as tf
-import sklearn.preprocessing
-import math
+import sklearn.metrics
+import imblearn
 import time
+import math
 import matplotlib.pyplot as plt
-import sklearn.model_selection
 
 #
 # Load and prepare data
 #
 
-##Load and prepare train data
-train_df = pd.read_csv("data/train.csv", header=0)
-labels = train_df["Response"]
-train_df = train_df.drop(columns="Response")
-train_df = train_df.drop(columns="id")
+# Load and prepare the data
+df = pd.read_csv("data/train.csv", header=0)
+labels = df["Response"]
+df = df.drop(columns="Response")
+df = df.drop(columns="id")
 
-#Load and prepare test data
 test_df = pd.read_csv("data/test.csv")
 test_ids = test_df['id']
 test_df.drop(columns = ["id"], inplace = True)
@@ -38,38 +37,57 @@ categorical_mappings = [
 ]
 
 # Apply the mappings to the categorical columns
-train_df['Gender'] = train_df['Gender'].replace(categorical_mappings[0])
-train_df['Vehicle_Age'] = train_df['Vehicle_Age'].replace(categorical_mappings[1])
-train_df['Vehicle_Damage'] = train_df['Vehicle_Damage'].replace(categorical_mappings[2])
+df['Gender'] = df['Gender'].replace(categorical_mappings[0])
+df['Vehicle_Age'] = df['Vehicle_Age'].replace(categorical_mappings[1])
+df['Vehicle_Damage'] = df['Vehicle_Damage'].replace(categorical_mappings[2])
 
 # Apply the mappings to the categorical columns
 test_df["Gender"] = test_df['Gender'].replace(categorical_mappings[0])
 test_df["Vehicle_Age"] = test_df['Vehicle_Age'].replace(categorical_mappings[1])
 test_df["Vehicle_Damage"] = test_df['Vehicle_Damage'].replace(categorical_mappings[2])
 
-#Use part of the training data for supervised training and testing
-#Test data does not have labels
 train_data, test_data, train_labels, test_labels = \
-            sklearn.model_selection.train_test_split(train_df, labels,
+            sklearn.model_selection.train_test_split(df, labels,
             test_size=0.2, shuffle=True, random_state=2024)
+
+# Feature scale standardization
+for col in train_data.columns:
+    mean = train_data[col].mean()
+    stddev = train_data[col].std()
+    train_data[col] = train_data[col] - mean
+    train_data[col] = train_data[col]/stddev
+    test_data[col] = test_data[col] - mean
+    test_data[col] = test_data[col]/stddev
+    test_df[col] = test_df[col] - mean
+    test_df[col] = test_df[col]/stddev
+    
+# Balance classes
+# num_ones = np.count_nonzero(train_labels)
+# num_zeros = len(train_labels) - np.count_nonzero(train_labels)
+# sm = imblearn.over_sampling.RandomOverSampler(sampling_strategy={0:num_zeros, 1:num_zeros})
+# train_data, train_labels = sm.fit_resample(train_data, train_labels)
+# print("Balancing classes with Upsampling")
 
 # Get some lengths
 n_inputs = train_data.shape[1]
 nsamples = train_data.shape[0]
 
 # Training constants
-n_nodes = 500
-n_hidden_layers = 5
-batch_size = math.ceil(nsamples / 10)
-n_epochs = 750
-eval_step = 10
-learning_rate = 1e-4
+n_nodes = 400
+#batch_size = math.ceil(nsamples / 10)
+batch_size = 1024
+n_epochs = 100
+eval_step = 2
+learning_rate = 1e-3
+n_hidden_layers = 8
+#dropout_rate = 0.1
 
 # Print configuration summary
 n_nodes_per_layer = n_nodes // n_hidden_layers
 print("Num nodes: {} Num layers: {} Nodes per layer: {}".format(n_nodes, n_hidden_layers, n_nodes_per_layer))
 n_batches = math.ceil(nsamples / batch_size)
 print("Batch size: {} Num batches: {} Num epochs: {}".format(batch_size, n_batches, n_epochs))
+
 
 #
 # Keras definitions
@@ -85,9 +103,10 @@ model.add(tf.keras.layers.Input(shape=(n_inputs,)))
 for n in range(n_hidden_layers):
     model.add(tf.keras.layers.Dense(
             n_nodes_per_layer,
-            activation='elu',
+            activation='relu',
             kernel_initializer='he_normal', bias_initializer='zeros'))
-    print("Layer {}: Num nodes={}  Activation=ELU".format(n+1, n_nodes_per_layer))
+    #model.add(tf.keras.layers.Dropout(dropout_rate))
+    print("Layer {}: Num nodes={}  Activation=RELU".format(n+1, n_nodes_per_layer))
 
 # Output layer
 model.add(tf.keras.layers.Dense(
@@ -109,7 +128,7 @@ print("Optimizer: ADAM.  Learning rate = {}".format(learning_rate))
 model.compile(
         optimizer=optimizer,
         loss='binary_crossentropy',
-        metrics=['AUC']
+        metrics=['AUC']    
         )
 
 # Train the neural network
@@ -126,18 +145,23 @@ history = model.fit(
 elapsed_time = time.time() - start_time
 print("Execution time: {:.1f}".format(elapsed_time))
 
-cost_test, acc_test = model.evaluate(test_data, test_labels, batch_size=None, verbose=0)
-cost_train, acc_train = model.evaluate(train_data, train_labels, batch_size=None, verbose=0)
+cost_test, auc_test = model.evaluate(test_data, test_labels, batch_size=None, verbose=0)
+cost_train, auc_train = model.evaluate(train_data, train_labels, batch_size=None, verbose=0)
 
-print("Final Test AUC:     {:.4f}".format(acc_test))
-print("Final Training Cost:     {:.8f}".format(cost_train))
+print("Final Test AUC:          {:.4f}".format(auc_test))
+print("Final Training Cost:     {:.4f}".format(cost_train))
 
-# Compute the best test result from the history
-epoch_hist = [i for i in range(0, n_epochs, eval_step)]
-test_acc_hist = history.history['val_AUC']
-test_best_val = max(test_acc_hist)
-test_best_idx = test_acc_hist.index(test_best_val)
-print("Best Test AUC:      {:.4f} at epoch: {}".format(test_best_val, epoch_hist[test_best_idx]))
+try:
+    # Compute the best test result from the history
+    epoch_hist = [i for i in range(0, n_epochs, eval_step)]
+    test_auc_hist = history.history['val_AUC']
+    test_best_val = max(test_auc_hist)
+    test_best_idx = test_auc_hist.index(test_best_val)
+    test_best_idx = int(test_best_idx / 2)
+    print("Best Test AUC:           {:.4f} at epoch: {}".format(test_best_val, epoch_hist[test_best_idx]))
+except Exception as e:
+    print(e)
+    pass
 
 #Predict responses in test data set
 prediction_test = model.predict(test_df, verbose = "auto", steps = None , callbacks = None)
@@ -147,16 +171,3 @@ result = pd.DataFrame({'id' : test_ids, 'Response' : prediction_test.flatten()},
 
 result.to_csv("data/submission.csv",index=False)
 
-# Plot the history of the loss
-plt.plot(history.history['loss'])
-plt.title('Training Cost')
-plt.ylabel('Cost')
-plt.xlabel('Epoch')
-
-# Plot the history of the test accuracy
-plt.figure()
-plt.plot(epoch_hist, history.history['val_AUC'], "r")
-plt.title('Test AUC')
-plt.ylabel('AUC')
-plt.xlabel('Epoch')
-plt.show()
