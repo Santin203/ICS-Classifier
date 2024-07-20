@@ -68,18 +68,26 @@ for col in train_data.columns:
 # train_data, train_labels = sm.fit_resample(train_data, train_labels)
 # print("Balancing classes with Upsampling")
 
+# Undersampling
+# num_ones = np.count_nonzero(train_labels)
+# num_zeros = len(train_labels) - np.count_nonzero(train_labels)
+# max_samples = min(num_zeros, num_ones)
+# sm = imblearn.under_sampling.RandomUnderSampler(sampling_strategy={0:max_samples, 1:max_samples})
+# train_data, train_labels = sm.fit_resample(train_data, train_labels)
+# print("Balancing classes with Undersampling")
+
 # Get some lengths
 n_inputs = train_data.shape[1]
 nsamples = train_data.shape[0]
 
 # Training constants
-n_nodes = 400
+n_nodes = 1000
 #batch_size = math.ceil(nsamples / 10)
 batch_size = 1024
 n_epochs = 100
-eval_step = 2
+eval_step = 5
 learning_rate = 1e-3
-n_hidden_layers = 8
+n_hidden_layers = 7
 #dropout_rate = 0.1
 
 # Print configuration summary
