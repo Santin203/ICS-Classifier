@@ -3,6 +3,7 @@
 # k-Nearest Neighbors Classifier
 # By Juan Carlos Rojas
 # Copyright 2024, Texas Tech University - Costa Rica
+# modified by: William He Yu
 
 import numpy as np
 import pandas as pd
@@ -50,12 +51,12 @@ num_zeros = len(train_labels) - num_ones
 
 # resampler = imblearn.under_sampling.RandomUnderSampler(
 #         sampling_strategy={0:num_ones, 1:num_ones}, random_state=2024)
-resampler = imblearn.under_sampling.RandomUnderSampler(
-        sampling_strategy={0:(num_ones), 1:num_ones}, random_state=2024)
+# resampler = imblearn.under_sampling.RandomUnderSampler(
+#         sampling_strategy={0:(num_ones), 1:num_ones}, random_state=2024)
 # resampler = imblearn.over_sampling.RandomOverSampler(
 #        sampling_strategy={0:num_zeros, 1:num_zeros}, random_state=2024)
 
-train_data, train_labels = resampler.fit_resample(train_data, train_labels)
+# train_data, train_labels = resampler.fit_resample(train_data, train_labels)
 
 
 #
@@ -64,7 +65,7 @@ train_data, train_labels = resampler.fit_resample(train_data, train_labels)
 
 print("Training kNN Classifier")
 
-n=500
+n=100
 model = sklearn.neighbors.KNeighborsClassifier(n_neighbors=n, n_jobs=-1)
 model.fit(train_data, train_labels)
 

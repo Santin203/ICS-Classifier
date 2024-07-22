@@ -3,6 +3,7 @@
 # Ensemble classifier
 # By Juan Carlos Rojas
 # Copyright 2024, Texas Tech University - Costa Rica
+# Modified by: William He Yu
 
 import numpy as np
 import pandas as pd
@@ -51,30 +52,45 @@ train_data, test_data, train_labels, test_labels = \
 # Create and train classifier
 #
 
-# kNN classifier
-knn = sklearn.neighbors.KNeighborsClassifier(n_neighbors=300)
+# Knn classifier
+# knn = sklearn.neighbors.KNeighborsClassifier(n_neighbors=100, n_jobs=-1)
 
 # Logistic regression classifier
 logistic = sklearn.linear_model.LogisticRegression(\
-        solver='newton-cg', tol=1e-6)
+        solver='newton-cg', class_weight='balanced', n_jobs=-1)
 
-# Create a Random Forest classifier
+# Random forest classifier
+n_est = 100
+msl_rf = 20
+
 randforest = sklearn.ensemble.RandomForestClassifier(\
-    n_estimators=50,
-    min_samples_leaf=0.001)
+    n_estimators=n_est,
+    min_samples_leaf=msl_rf,
+    n_jobs=-1)
 
-# Gradient Boosting classifier
-gboost = sklearn.ensemble.GradientBoostingClassifier(\
-    loss='log_loss', subsample=0.2,
-    n_estimators=100, min_samples_leaf=0.001)
+# HistGradientBoosting classifier
+msl = 10
+learning_rate = 0.3
+max_iter = 500
+max_depth = 5
+l2_regularization = 1.0
+early_stopping = False
+
+histgboost = sklearn.ensemble.HistGradientBoostingClassifier(
+    min_samples_leaf=msl,
+    learning_rate=learning_rate,
+    max_iter=max_iter,
+    max_depth=max_depth,
+    l2_regularization=l2_regularization,
+    verbose=2)
 
 
 # Create a voting ensemble of classifiers
 model = sklearn.ensemble.VotingClassifier(
-    estimators=[('knn', knn),
+    estimators=[#('knn', knn),
                 ('logistic', logistic),
                 ('randforest', randforest),
-                ('gboost', gboost),
+                ('gboost', histgboost),
                 ],voting='soft')
 
 # Train it with the training data and labels
@@ -83,36 +99,15 @@ model.fit(train_data, train_labels)
 # Get prediction probabilities
 pred_proba = model.predict_proba(test_data)[:,1]
 
-#
-# Performance Metrics
-#
-
-#"""
-# Compute a precision & recall graph
-precisions, recalls, thresholds = \
-    sklearn.metrics.precision_recall_curve(test_labels, pred_proba)
-plt.plot(thresholds, precisions[:-1], "b--", label="Precision")
-plt.plot(thresholds, recalls[:-1], "g-", label="Recall")
-plt.legend(loc="center left")
-plt.xlabel("Threshold")
-plt.axis([0.0, 1.0, 0.0, 1.0])
-plt.show()
-
-# Plot a ROC curve (Receiver Operating Characteristic)
-fpr, tpr, _ = sklearn.metrics.roc_curve(test_labels, pred_proba)
-plt.plot(fpr,tpr)
-plt.xlabel('False Positive Rate')
-plt.ylabel('True Positive Rate')
-plt.title('Receiver Operating Characteristic')
-plt.show()
-#"""
-
 # Compute the area under the ROC curve (ROC AUC)
 auc_score = sklearn.metrics.roc_auc_score(test_labels, pred_proba)
 print("Test AUC score: {:.4f}".format(auc_score))
 
-# Compute ROC AUC against training data
-pred_proba_training = model.predict_proba(train_data)[:,1]
-auc_score_training = sklearn.metrics.roc_auc_score(\
-    train_labels, pred_proba_training)
-print("Train AUC score: {:.4f}".format(auc_score_training))
+# Get the prediction probabilities for the test data
+# print("Creating submission file")
+# predictions_test = model.predict_proba(test_df)[:,1]
+
+# result = pd.DataFrame({'id' : test_ids, 'Response' : predictions_test.flatten()}, 
+#                       columns=['id', 'Response'])
+
+# result.to_csv("data/submission.csv",index=False)

@@ -3,7 +3,7 @@
 # Logistic regression
 # By Juan Carlos Rojas
 # Copyright 2024, Texas Tech University - Costa Rica
-# Modified by: Santiago Jimenez
+# Modified by: Santiago Jimenez and William He Yu
 
 import numpy as np
 import pandas as pd
@@ -57,9 +57,16 @@ for col in train_data.columns:
 # Select columns of interest (all columns)
 cols = train_data.columns
 
+solver = 'newton-cg'
+tol = 1e-4
+class_weight = 'balanced'
+
+print(f"Solver: {solver}, Tolerance: {tol}, Class weight: {class_weight}")
 # Create and train a new logistic regression classifier
 model = sklearn.linear_model.LogisticRegression(\
-        solver='newton-cg',
+        solver=solver, 
+        tol=tol,
+        class_weight=class_weight,
         n_jobs=-1)
 
 # Train it with the training data and labels
@@ -69,7 +76,7 @@ model.fit(train_data[cols], train_labels)
 pred_proba = model.predict_proba(test_data[cols])[:,1]
 
 # Print a few predictions
-print(pred_proba[:5])
+# print(pred_proba[:5])
 
 # Compute the area under the ROC curve (ROC AUC)
 auc_score = sklearn.metrics.roc_auc_score(test_labels, pred_proba)
@@ -83,11 +90,11 @@ auc_score_training = sklearn.metrics.roc_auc_score(\
 print("Train AUC score: {:.4f}".format(auc_score_training))
 
 
-# Get the prediction probabilities for the test data
-predictions_test = model.predict_proba(test_df)[:,1]
+# # Get the prediction probabilities for the test data
+# predictions_test = model.predict_proba(test_df)[:,1]
 
 
-result = pd.DataFrame({'id' : test_ids, 'Response' : predictions_test.flatten()}, 
-                      columns=['id', 'Response'])
+# result = pd.DataFrame({'id' : test_ids, 'Response' : predictions_test.flatten()}, 
+#                       columns=['id', 'Response'])
 
-result.to_csv("data/submission.csv",index=False)
+# result.to_csv("data/submission.csv",index=False)
