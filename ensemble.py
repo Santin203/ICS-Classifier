@@ -1,16 +1,20 @@
 # Introduction to Artificial Intelligence
 # Credit Default Dataset
-# Logistic regression
+# Ensemble classifier
 # By Juan Carlos Rojas
 # Copyright 2024, Texas Tech University - Costa Rica
-# Modified by: Santiago Jimenez and William He Yu
+# Modified by: William He Yu
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import sklearn.model_selection
 import sklearn.linear_model
+import sklearn.ensemble
+import sklearn.neighbors
 import sklearn.metrics
+import imblearn
+
 
 # Load and prepare the data
 df = pd.read_csv("data/train.csv", header=0)
@@ -20,7 +24,7 @@ df = df.drop(columns="id")
 
 test_df = pd.read_csv("data/test.csv")
 test_ids = test_df['id']
-test_df.drop(columns = ["id"], inplace = True)
+test_df.drop(columns=["id"], inplace=True)
 
 # Define the categorical mappings
 categorical_mappings = [
@@ -43,56 +47,65 @@ train_data, test_data, train_labels, test_labels = \
             sklearn.model_selection.train_test_split(df, labels,
             test_size=0.2, shuffle=True, random_state=2024)
 
-# Feature scale standardization
-for col in train_data.columns:
-    mean = train_data[col].mean()
-    stddev = train_data[col].std()
-    train_data[col] = train_data[col] - mean
-    train_data[col] = train_data[col]/stddev
-    test_data[col] = test_data[col] - mean
-    test_data[col] = test_data[col]/stddev
-    test_df[col] = test_df[col] - mean
-    test_df[col] = test_df[col]/stddev
-    
-# Select columns of interest (all columns)
-cols = train_data.columns
 
-solver = 'newton-cg'
-tol = 1e-4
-class_weight = 'balanced'
+#
+# Create and train classifier
+#
 
-print(f"Solver: {solver}, Tolerance: {tol}, Class weight: {class_weight}")
-# Create and train a new logistic regression classifier
-model = sklearn.linear_model.LogisticRegression(\
-        solver=solver, 
-        tol=tol,
-        class_weight=class_weight,
-        n_jobs=-1)
+# Knn classifier
+# knn = sklearn.neighbors.KNeighborsClassifier(n_neighbors=100, n_jobs=-1)
+
+# Logistic regression classifier
+logistic = sklearn.linear_model.LogisticRegression(\
+        solver='newton-cg', class_weight='balanced', n_jobs=-1)
+
+# Random forest classifier
+n_est = 100
+msl_rf = 20
+
+randforest = sklearn.ensemble.RandomForestClassifier(\
+    n_estimators=n_est,
+    min_samples_leaf=msl_rf,
+    n_jobs=-1)
+
+# HistGradientBoosting classifier
+msl = 10
+learning_rate = 0.3
+max_iter = 500
+max_depth = 5
+l2_regularization = 1.0
+early_stopping = False
+
+histgboost = sklearn.ensemble.HistGradientBoostingClassifier(
+    min_samples_leaf=msl,
+    learning_rate=learning_rate,
+    max_iter=max_iter,
+    max_depth=max_depth,
+    l2_regularization=l2_regularization,
+    verbose=2)
+
+
+# Create a voting ensemble of classifiers
+model = sklearn.ensemble.VotingClassifier(
+    estimators=[#('knn', knn),
+                ('logistic', logistic),
+                ('randforest', randforest),
+                ('gboost', histgboost),
+                ],voting='soft')
 
 # Train it with the training data and labels
-model.fit(train_data[cols], train_labels)
+model.fit(train_data, train_labels)
 
-# Get the prediction probabilities
-pred_proba = model.predict_proba(test_data[cols])[:,1]
-
-# Print a few predictions
-# print(pred_proba[:5])
+# Get prediction probabilities
+pred_proba = model.predict_proba(test_data)[:,1]
 
 # Compute the area under the ROC curve (ROC AUC)
 auc_score = sklearn.metrics.roc_auc_score(test_labels, pred_proba)
 print("Test AUC score: {:.4f}".format(auc_score))
 
-# Compute ROC AUC against training data
-pred_proba_training = model.predict_proba(train_data[cols])[:,1]
-
-auc_score_training = sklearn.metrics.roc_auc_score(\
-    train_labels, pred_proba_training)
-print("Train AUC score: {:.4f}".format(auc_score_training))
-
-
-# # Get the prediction probabilities for the test data
+# Get the prediction probabilities for the test data
+# print("Creating submission file")
 # predictions_test = model.predict_proba(test_df)[:,1]
-
 
 # result = pd.DataFrame({'id' : test_ids, 'Response' : predictions_test.flatten()}, 
 #                       columns=['id', 'Response'])
