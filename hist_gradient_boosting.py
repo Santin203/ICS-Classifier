@@ -60,19 +60,20 @@ resampler = imblearn.under_sampling.RandomUnderSampler(
 train_data, train_labels = resampler.fit_resample(train_data, train_labels)
 """
 
-msl = 1
-learning_rate = 0.3
-max_iter = 300
+msl = 10
+learning_rate = 0.1
+max_iter = 1100
 max_depth = 5
-l2_regularization = 1.0
+l2_regularization = 1
 early_stopping = False
+class_weight = None
 
 model = sklearn.ensemble.HistGradientBoostingClassifier(
     min_samples_leaf=msl,
     learning_rate=learning_rate,
     max_iter=max_iter,
     max_depth=max_depth,
-    l2_regularization=l2_regularization,
+    l2_regularization=l2_regularization, early_stopping=False, class_weight=class_weight,
     verbose=2)
 
 print("With min_samples_leaf={}, learning_rate={}, max_iter={}, max_depth={}, l2_regularization={}".format(
