@@ -62,16 +62,20 @@ logistic = sklearn.linear_model.LogisticRegression(\
 # Random forest classifier
 n_est = 100
 msl_rf = 20
+max_features = 'log2'
+class_weight = 'balanced'
 
 randforest = sklearn.ensemble.RandomForestClassifier(\
     n_estimators=n_est,
     min_samples_leaf=msl_rf,
+    max_features=max_features,
+    class_weight= class_weight,
     n_jobs=-1)
 
 # HistGradientBoosting classifier
 msl = 10
 learning_rate = 0.3
-max_iter = 500
+max_iter = 600
 max_depth = 5
 l2_regularization = 1.0
 early_stopping = False
@@ -88,7 +92,7 @@ histgboost = sklearn.ensemble.HistGradientBoostingClassifier(
 # Create a voting ensemble of classifiers
 model = sklearn.ensemble.VotingClassifier(
     estimators=[#('knn', knn),
-                ('logistic', logistic),
+                #('logistic', logistic),
                 ('randforest', randforest),
                 ('gboost', histgboost),
                 ],voting='soft')

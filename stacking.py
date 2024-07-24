@@ -1,17 +1,20 @@
 # Introduction to Artificial Intelligence
 # Credit Default Dataset
-# Random Forest Classifier
+# Ensemble classifier
 # By Juan Carlos Rojas
 # Copyright 2024, Texas Tech University - Costa Rica
-# Modified by: Santiago Jimenez
+# Modified by: William He Yu
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import sklearn.model_selection
+import sklearn.linear_model
 import sklearn.ensemble
+import sklearn.neighbors
 import sklearn.metrics
 import imblearn
+
 
 # Load and prepare the data
 df = pd.read_csv("data/train.csv", header=0)
@@ -21,7 +24,7 @@ df = df.drop(columns="id")
 
 test_df = pd.read_csv("data/test.csv")
 test_ids = test_df['id']
-test_df.drop(columns = ["id"], inplace = True)
+test_df.drop(columns=["id"], inplace=True)
 
 # Define the categorical mappings
 categorical_mappings = [
@@ -44,36 +47,62 @@ train_data, test_data, train_labels, test_labels = \
             sklearn.model_selection.train_test_split(df, labels,
             test_size=0.2, shuffle=True, random_state=2024)
 
-"""
-# Balance classes 
-num_ones = np.count_nonzero(train_labels)
-num_zeros = len(train_labels) - num_ones
 
-resampler = imblearn.under_sampling.RandomUnderSampler(
-        sampling_strategy={0:num_ones, 1:num_ones}, random_state=2024)
-# resampler = imblearn.under_sampling.RandomUnderSampler(
-#         sampling_strategy={0:(num_ones/3), 1:num_ones}, random_state=2024)
-# resampler = imblearn.over_sampling.RandomOverSampler(
-#        sampling_strategy={0:num_zeros, 1:num_zeros}, random_state=2024)
+#
+# Create and train classifier
+#
 
-train_data, train_labels = resampler.fit_resample(train_data, train_labels)
-"""
+# Knn classifier
+# knn = sklearn.neighbors.KNeighborsClassifier(n_neighbors=100, n_jobs=-1)
 
+# Logistic regression classifier
+logistic = sklearn.linear_model.LogisticRegression(\
+        solver='newton-cg', class_weight='balanced', n_jobs=-1)
+
+# Random forest classifier
 n_est = 100
-msl = 20
+msl_rf = 20
 max_features = 'log2'
 class_weight = 'balanced'
 
-model = sklearn.ensemble.RandomForestClassifier(\
+randforest = sklearn.ensemble.RandomForestClassifier(\
     n_estimators=n_est,
-    min_samples_leaf=msl,
+    min_samples_leaf=msl_rf,
     max_features=max_features,
     class_weight= class_weight,
     n_jobs=-1)
 
-print("With n_estimators={}, min_samples_leaf={}:".format(n_est, msl))
-    
+# HistGradientBoosting classifier
+msl = 10
+learning_rate = 0.3
+max_iter = 600
+max_depth = 5
+l2_regularization = 1.0
+early_stopping = False
+
+histgboost = sklearn.ensemble.HistGradientBoostingClassifier(
+    min_samples_leaf=msl,
+    learning_rate=learning_rate,
+    max_iter=max_iter,
+    max_depth=max_depth,
+    l2_regularization=l2_regularization,
+    verbose=2)
+
+
+# Create a voting ensemble of classifiers
+model = sklearn.ensemble.StackingClassifier(
+    estimators=[#('knn', knn),
+                ('randforest', randforest),
+                ('gboost', histgboost),
+                ],
+    final_estimator=logistic,
+    n_jobs=-1,
+    passthrough=True)
+
+# Train it with the training data and labels
 model.fit(train_data, train_labels)
+
+# Get prediction probabilities
 pred_proba = model.predict_proba(test_data)[:,1]
 
 # Compute the area under the ROC curve (ROC AUC)
@@ -81,11 +110,10 @@ auc_score = sklearn.metrics.roc_auc_score(test_labels, pred_proba)
 print("Test AUC score: {:.4f}".format(auc_score))
 
 # Get the prediction probabilities for the test data
+# print("Creating submission file")
 # predictions_test = model.predict_proba(test_df)[:,1]
 
 # result = pd.DataFrame({'id' : test_ids, 'Response' : predictions_test.flatten()}, 
 #                       columns=['id', 'Response'])
 
 # result.to_csv("data/submission.csv",index=False)
-
-
