@@ -1,20 +1,16 @@
 # Introduction to Artificial Intelligence
-# Credit Default Dataset
-# Ensemble classifier
-# By Juan Carlos Rojas
-# Copyright 2024, Texas Tech University - Costa Rica
-# Modified by: William He Yu
+# Project 2: Kaggle competetion
+# Ensemble AdaBoost classifier
+# By William He Yu, Jose Campos and Santiago Jimenez
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import sklearn.model_selection
-import sklearn.linear_model
 import sklearn.ensemble
-import sklearn.neighbors
+import sklearn.linear_model
 import sklearn.metrics
-import imblearn
-
+import sklearn.model_selection
+import sklearn.neighbors
 
 # Load and prepare the data
 df = pd.read_csv("data/train.csv", header=0)
@@ -48,43 +44,26 @@ train_data, test_data, train_labels, test_labels = \
             test_size=0.2, shuffle=True, random_state=2024)
 
 
-#
-# Create and train classifier
-#
 
-# HistGradientBoosting classifier
+# Define the hyperparameters for the model
 msl = 10
-learning_rate = 0.3
-max_iter = 600
+learning_rate = 0.8
+max_iter = 200
 max_depth = 5
-l2_regularization = 1.0
-early_stopping = False
 
 histgboost = sklearn.ensemble.HistGradientBoostingClassifier(
     min_samples_leaf=msl,
     learning_rate=learning_rate,
     max_iter=max_iter,
     max_depth=max_depth,
-    l2_regularization=l2_regularization,
     verbose=2)
 
 
-n_est = 100
-msl = 20
-max_features = 'log2'
-class_weight = 'balanced'
-
-rf = sklearn.ensemble.RandomForestClassifier(\
-    n_estimators=n_est,
-    min_samples_leaf=msl,
-    max_features=max_features,
-    class_weight= class_weight,
-    n_jobs=-1)
-
-# Create a voting ensemble of classifiers
+# Create a AdaBoost Classifier of histgboost
 model = sklearn.ensemble.AdaBoostClassifier(
-    estimator=rf,
-    n_estimators=2)
+    estimator=histgboost,
+    n_estimators=500,
+    learning_rate=0.8)
 
 # Train it with the training data and labels
 model.fit(train_data, train_labels)
@@ -96,11 +75,32 @@ pred_proba = model.predict_proba(test_data)[:,1]
 auc_score = sklearn.metrics.roc_auc_score(test_labels, pred_proba)
 print("Test AUC score: {:.4f}".format(auc_score))
 
+#"""
+# Compute a precision & recall graph
+precisions, recalls, thresholds = \
+    sklearn.metrics.precision_recall_curve(test_labels, pred_proba)
+plt.plot(thresholds, precisions[:-1], "b--", label="Precision")
+plt.plot(thresholds, recalls[:-1], "g-", label="Recall")
+plt.legend(loc="center left")
+plt.xlabel("Threshold")
+plt.axis([0.0, 1.0, 0.0, 1.0])
+plt.show()
+
+# Plot a ROC curve (Receiver Operating Characteristic)
+fpr, tpr, _ = sklearn.metrics.roc_curve(test_labels, pred_proba)
+plt.plot(fpr,tpr)
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('Receiver Operating Characteristic')
+plt.show()
+#"""
+
+
 # Get the prediction probabilities for the test data
-print("Creating submission file")
-predictions_test = model.predict_proba(test_df)[:,1]
+# print("Creating submission file")
+# predictions_test = model.predict_proba(test_df)[:,1]
 
-result = pd.DataFrame({'id' : test_ids, 'Response' : predictions_test.flatten()}, 
-                      columns=['id', 'Response'])
+# result = pd.DataFrame({'id' : test_ids, 'Response' : predictions_test.flatten()}, 
+#                       columns=['id', 'Response'])
 
-result.to_csv("data/submission.csv",index=False)
+# result.to_csv("data/submission.csv",index=False)
